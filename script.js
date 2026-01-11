@@ -5,8 +5,8 @@ const MAX_GUESSES = 6;
 const keyStates = {}; // letter -> "correct" | "present" | "absent"
 
 const LEVELS = {
-  Mia: ["Sniffer", "big cheese", "a b c d e f g h", "james", "hello"],
-  Hannah: ["GRAPE", "BRICK", "SMILE"]
+  Mia: ["sniffer", "beaker", "freddy fazbear", "james", "gavin and stacey", "muppets christmas carol","stephen bunting"],
+  Hannah: ["One", "Two", "Garlic Bread", "Four", "Five", "Six","Seven"]
 };
 
 // ===== STATE =====
@@ -88,6 +88,8 @@ function startLevelFor(player, index, { resetRestartCount }) {
   TARGET_LAYOUT = parseTarget(TARGET_WORD);
   ACTIVE_COLUMNS = CLEAN_TARGET.length;
 
+  const fontScale = computeFontScale(TARGET_LAYOUT.length);
+  boardElement.style.setProperty("--tile-font-scale", fontScale);
 
   if (resetRestartCount) restartCount = 0;
 
@@ -102,6 +104,7 @@ function startLevelFor(player, index, { resetRestartCount }) {
   renderLevelPanels();
 }
 
+
 function resetBoard() {
   boardElement.innerHTML = "";
   keyboardElement.innerHTML = "";
@@ -114,6 +117,9 @@ function resetBoard() {
   );
 
   createBoard();
+  createBoard();
+  applyTileFontSize();
+  createKeyboard();
   createKeyboard();
 }
 
@@ -126,7 +132,7 @@ function createBoard() {
     const rowEl = document.createElement("div");
     rowEl.className = "row";
     rowEl.style.gridTemplateColumns =
-      `repeat(${TARGET_LAYOUT.length}, auto)`;
+      `repeat(${TARGET_LAYOUT.length}, minmax(0,1fr))`;
 
     board[r] = [];
 
@@ -425,6 +431,21 @@ function parseTarget(word) {
   }));
 }
 
+function computeFontScale(columnCount) {
+  if (columnCount <= 6) return 75;   // big, chunky
+  if (columnCount <= 9) return 65;
+  if (columnCount <= 12) return 58;
+  if (columnCount <= 16) return 52;
+  return 46; // very long phrases
+}
+
+function applyTileFontSize() {
+  const tile = boardElement.querySelector(".tile");
+  if (!tile) return;
+
+  const size = tile.getBoundingClientRect().width;
+  boardElement.style.setProperty("--tile-size", `${size}px`);
+}
 
 
 // ===== INIT =====
