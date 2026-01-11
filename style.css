@@ -71,7 +71,7 @@ body {
     margin: 10px 0 18px;
     padding: 0 4px;
     width: 100%;
-    max-width: 100vw;
+    max-width: 520px;
     overflow: hidden;
 }
 
@@ -94,7 +94,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: calc(var(--tile-size) * 0.62);
+    font-size: clamp( 18px, calc(var(--tile-size) * 0.62), 42px );
     font-weight: bold;
     text-transform: uppercase;
     line-height: 1;
@@ -103,6 +103,8 @@ body {
     transition: transform 0.25s ease;
     will-change: transform;
 }
+
+
 
 
     .tile.flip-in {
@@ -233,7 +235,6 @@ body {
     #level-panels {
         max-width: 95%;
     }
-}
     .gap {
         width: 12px;
     }

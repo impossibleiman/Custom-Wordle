@@ -3,11 +3,29 @@ let TARGET_LAYOUT = [];
 let ACTIVE_COLUMNS = 0; // letters only
 const MAX_GUESSES = 6;
 const keyStates = {}; // letter -> "correct" | "present" | "absent"
+let currentLevelId = null;
 
 const LEVELS = {
-  Mia: ["sniffer", "beaker", "freddy fazbear", "james", "gavin and stacey", "muppets christmas carol","stephen bunting"],
-  Hannah: ["One", "Two", "Garlic Bread", "Four", "Five", "Six","Seven"]
+  Mia: [
+    { id: "mia-1", word: "sniffer" },
+    { id: "mia-2", word: "beaker" },
+    { id: "mia-3", word: "freddy fazbear" },
+    { id: "mia-4", word: "james" },
+    { id: "mia-5", word: "gavin and stacey" },
+    { id: "mia-6", word: "muppets christmas carol" },
+    { id: "mia-7", word: "stephen bunting" }
+  ],
+  Hannah: [
+    { id: "han-1", word: "one" },
+    { id: "han-2", word: "two" },
+    { id: "han-3", word: "garlic bread" },
+    { id: "han-4", word: "four" },
+    { id: "han-5", word: "five" },
+    { id: "han-6", word: "six" },
+    { id: "han-7", word: "seven" }
+  ]
 };
+
 
 // ===== STATE =====
 let currentPlayer = null;
@@ -39,11 +57,20 @@ function getProgress() {
   return JSON.parse(localStorage.getItem("wordleProgress")) || {};
 }
 
-function saveProgress(player, level) {
+function saveLevelCompleted(player, levelId) {
   const data = getProgress();
-  data[player] = Math.max(data[player] ?? 0, level);
+
+  if (!data[player]) {
+    data[player] = { completed: [] };
+  }
+
+  if (!data[player].completed.includes(levelId)) {
+    data[player].completed.push(levelId);
+  }
+
   localStorage.setItem("wordleProgress", JSON.stringify(data));
 }
+
 
 // ===== LEVEL UI =====
 function renderLevelPanels() {
@@ -52,24 +79,32 @@ function renderLevelPanels() {
 }
 
 function renderPlayer(player) {
-  const progress = getProgress()[player] ?? 0;
-  const container = document.getElementById(player === "Mia" ? "mia-levels" : "hannah-levels");
+  const progress = getProgress()[player]?.completed ?? [];
+  const container = document.getElementById(
+    player === "Mia" ? "mia-levels" : "hannah-levels"
+  );
 
   container.innerHTML = "";
 
-  // All levels clickable (scales automatically)
-  LEVELS[player].forEach((_, i) => {
+  LEVELS[player].forEach((level, i) => {
     const dot = document.createElement("div");
     dot.className = "level-dot";
 
-    if (i < progress) dot.classList.add("completed");
-    if (player === currentPlayer && i === levelIndex) dot.classList.add("active");
+    if (progress.includes(level.id)) {
+      dot.classList.add("completed");
+    }
 
-    dot.onclick = () => startLevelFor(player, i, { resetRestartCount: true });
+    if (player === currentPlayer && i === levelIndex) {
+      dot.classList.add("active");
+    }
+
+    dot.onclick = () =>
+      startLevelFor(player, i, { resetRestartCount: true });
 
     container.appendChild(dot);
   });
 }
+
 
 // ===== GAME FLOW =====
 function startLevelFor(player, index, { resetRestartCount }) {
@@ -77,13 +112,16 @@ function startLevelFor(player, index, { resetRestartCount }) {
   levelIndex = index;
 
   const levels = LEVELS[player];
+  const level = levels[index];
+  currentLevelId = level.id;
+
   if (index < 0 || index >= levels.length) {
     showMessage("No more levels.");
     gameOver = true;
     return;
   }
 
-  TARGET_WORD = levels[index].toUpperCase();
+  TARGET_WORD = level.word.toUpperCase();
   CLEAN_TARGET = TARGET_WORD.replace(/ /g, "");
   TARGET_LAYOUT = parseTarget(TARGET_WORD);
   ACTIVE_COLUMNS = CLEAN_TARGET.length;
@@ -100,6 +138,7 @@ function startLevelFor(player, index, { resetRestartCount }) {
   keyboardElement.style.display = "flex";
 
   resetBoard();
+  restoreSavedGuesses();
   listenForKeyboard();
   renderLevelPanels();
 }
@@ -117,9 +156,7 @@ function resetBoard() {
   );
 
   createBoard();
-  createBoard();
   applyTileFontSize();
-  createKeyboard();
   createKeyboard();
 }
 
@@ -260,7 +297,9 @@ async function submitGuess() {
   if (guess.length < CLEAN_TARGET.length) return;
 
   const result = scoreGuess(guess, CLEAN_TARGET);
+  saveGuess(currentLevelId, guess);
   revealRowAnimated(result);
+
 
   const totalRevealMs = CLEAN_TARGET.length * 300 + 50;
   isRevealing = true;
@@ -271,7 +310,7 @@ async function submitGuess() {
     // WIN
     if (guess === CLEAN_TARGET) {
       gameOver = true;
-      saveProgress(currentPlayer, levelIndex + 1);
+      saveLevelCompleted(currentPlayer, currentLevelId);
       renderLevelPanels();
       document.getElementById("continue").style.display = "inline-block";
       showMessage("Nice!");
@@ -293,32 +332,31 @@ async function submitGuess() {
 
 
 // Wordle-style scoring with duplicate handling
-function scoreGuess(guess, target) {
-  const res = Array(guess.length).fill("absent");
-  const targetArr = target.split("");
-  const guessArr = guess.split("");
+function scoreGuess(guess, cleanTarget) {
+  const targetWords = TARGET_WORD.split(" ");
+  const guessWords = [];
+  let ptr = 0;
 
-  // Pass 1: correct
-  for (let i = 0; i < guessArr.length; i++) {
-    if (guessArr[i] === targetArr[i]) {
-      res[i] = "correct";
-      targetArr[i] = null;
-      guessArr[i] = null;
-    }
+  // Split guess into word segments matching target word lengths
+  for (const word of targetWords) {
+    guessWords.push(guess.slice(ptr, ptr + word.length));
+    ptr += word.length;
   }
 
-  // Pass 2: present
-  for (let i = 0; i < guessArr.length; i++) {
-    if (!guessArr[i]) continue;
-    const idx = targetArr.indexOf(guessArr[i]);
-    if (idx !== -1) {
-      res[i] = "present";
-      targetArr[idx] = null;
-    }
+  const results = [];
+
+  // Score each word independently
+  for (let i = 0; i < targetWords.length; i++) {
+    const segmentResult = scoreSegment(
+      guessWords[i],
+      targetWords[i].toUpperCase()
+    );
+    results.push(...segmentResult);
   }
 
-  return res;
+  return results;
 }
+
 
 
 function revealRowAnimated(states) {
@@ -359,6 +397,7 @@ function restartLevel() {
   // Only valid after a fail (gameOver)
   if (!currentPlayer) return;
 
+  clearGuessesForLevel(currentLevelId);
   restartCount++;
 
   // After 3 restarts on THIS level, allow Reveal + Continue
@@ -383,10 +422,10 @@ function revealWord() {
 function continueLevel() {
   if (!currentPlayer) return;
 
-  // Continue to next level (and reset restartCount)
-  saveProgress(currentPlayer, levelIndex + 1);
+  saveLevelCompleted(currentPlayer, currentLevelId);
   startLevelFor(currentPlayer, levelIndex + 1, { resetRestartCount: true });
 }
+
 
 // ===== UI HELPERS =====
 function hideControls() {
@@ -440,12 +479,100 @@ function computeFontScale(columnCount) {
 }
 
 function applyTileFontSize() {
-  const tile = boardElement.querySelector(".tile");
-  if (!tile) return;
+  requestAnimationFrame(() => {
+    const tile = boardElement.querySelector(".tile");
+    if (!tile) return;
 
-  const size = tile.getBoundingClientRect().width;
-  boardElement.style.setProperty("--tile-size", `${size}px`);
+    const size = tile.getBoundingClientRect().width;
+    boardElement.style.setProperty("--tile-size", `${size}px`);
+  });
 }
+
+function scoreSegment(guess, target) {
+  const res = Array(guess.length).fill("absent");
+  const targetArr = target.split("");
+  const guessArr = guess.split("");
+
+  // Pass 1: correct
+  for (let i = 0; i < guessArr.length; i++) {
+    if (guessArr[i] === targetArr[i]) {
+      res[i] = "correct";
+      targetArr[i] = null;
+      guessArr[i] = null;
+    }
+  }
+
+  // Pass 2: present (within segment only)
+  for (let i = 0; i < guessArr.length; i++) {
+    if (!guessArr[i]) continue;
+    const idx = targetArr.indexOf(guessArr[i]);
+    if (idx !== -1) {
+      res[i] = "present";
+      targetArr[idx] = null;
+    }
+  }
+
+  return res;
+}
+
+function getSavedGuesses() {
+  return JSON.parse(localStorage.getItem("wordleGuesses")) || {};
+}
+
+function saveGuess(levelId, guess) {
+  const data = getSavedGuesses();
+
+  if (!data[levelId]) {
+    data[levelId] = [];
+  }
+
+  data[levelId].push(guess);
+  localStorage.setItem("wordleGuesses", JSON.stringify(data));
+}
+
+function clearGuessesForLevel(levelId) {
+  const data = getSavedGuesses();
+  delete data[levelId];
+  localStorage.setItem("wordleGuesses", JSON.stringify(data));
+}
+
+function restoreSavedGuesses() {
+  const data = getSavedGuesses();
+  const guesses = data[currentLevelId];
+  if (!Array.isArray(guesses)) return;
+
+  guesses.forEach(guess => {
+    if (currentRow >= MAX_GUESSES) return;
+
+    // Fill row
+    let col = 0;
+    for (let i = 0; i < TARGET_LAYOUT.length; i++) {
+      if (TARGET_LAYOUT[i].isSpace) continue;
+      board[currentRow][i].textContent = guess[col++];
+    }
+
+    // Score + reveal instantly (no animation)
+    const result = scoreGuess(guess, CLEAN_TARGET);
+    revealRowInstant(result);
+
+    currentRow++;
+    currentCol = 0;
+  });
+}
+
+function revealRowInstant(states) {
+  let stateIndex = 0;
+
+  for (let i = 0; i < TARGET_LAYOUT.length; i++) {
+    const tile = board[currentRow][i];
+    if (!tile) continue;
+
+    const state = states[stateIndex++];
+    tile.classList.add(state);
+    setKeyState(tile.textContent, state);
+  }
+}
+
 
 
 // ===== INIT =====
