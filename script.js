@@ -1,10 +1,11 @@
 // ===== CONFIG =====
-const WORD_LENGTH = 5;
+let TARGET_LAYOUT = [];
+let ACTIVE_COLUMNS = 0; // letters only
 const MAX_GUESSES = 6;
 const keyStates = {}; // letter -> "correct" | "present" | "absent"
 
 const LEVELS = {
-  Mia: ["APPLE", "CRANE", "PLANE"],
+  Mia: ["Sniffer", "big cheese", "a b c d e f g h", "james", "hello"],
   Hannah: ["GRAPE", "BRICK", "SMILE"]
 };
 
@@ -12,6 +13,7 @@ const LEVELS = {
 let currentPlayer = null;
 let levelIndex = 0;
 let TARGET_WORD = "";
+let CLEAN_TARGET = "";
 
 let currentRow = 0;
 let currentCol = 0;
@@ -74,14 +76,6 @@ function startLevelFor(player, index, { resetRestartCount }) {
   currentPlayer = player;
   levelIndex = index;
 
-  if (resetRestartCount) restartCount = 0;
-
-  hideControls();
-  clearMessage();
-  for (const k in keyStates) delete keyStates[k];
-  boardElement.style.display = "grid";
-  keyboardElement.style.display = "flex";
-
   const levels = LEVELS[player];
   if (index < 0 || index >= levels.length) {
     showMessage("No more levels.");
@@ -90,6 +84,19 @@ function startLevelFor(player, index, { resetRestartCount }) {
   }
 
   TARGET_WORD = levels[index].toUpperCase();
+  CLEAN_TARGET = TARGET_WORD.replace(/ /g, "");
+  TARGET_LAYOUT = parseTarget(TARGET_WORD);
+  ACTIVE_COLUMNS = CLEAN_TARGET.length;
+
+
+  if (resetRestartCount) restartCount = 0;
+
+  hideControls();
+  clearMessage();
+  for (const k in keyStates) delete keyStates[k];
+  boardElement.style.display = "grid";
+  keyboardElement.style.display = "flex";
+
   resetBoard();
   listenForKeyboard();
   renderLevelPanels();
@@ -113,22 +120,34 @@ function resetBoard() {
 // ===== BOARD/KEYBOARD CREATION =====
 function createBoard() {
   board = [];
+  boardElement.innerHTML = "";
 
   for (let r = 0; r < MAX_GUESSES; r++) {
     const rowEl = document.createElement("div");
     rowEl.className = "row";
+    rowEl.style.gridTemplateColumns =
+      `repeat(${TARGET_LAYOUT.length}, auto)`;
+
     board[r] = [];
 
-    for (let c = 0; c < WORD_LENGTH; c++) {
-      const tile = document.createElement("div");
-      tile.className = "tile";
-      rowEl.appendChild(tile);
-      board[r][c] = tile;
-    }
+    TARGET_LAYOUT.forEach(slot => {
+      if (slot.isSpace) {
+        const gap = document.createElement("div");
+        gap.className = "gap";
+        rowEl.appendChild(gap);
+        board[r].push(null);
+      } else {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        rowEl.appendChild(tile);
+        board[r].push(tile);
+      }
+    });
 
     boardElement.appendChild(rowEl);
   }
 }
+
 
 function createKeyboard() {
   const rows = [
@@ -186,47 +205,68 @@ function handleKey(key) {
 }
 
 function addLetter(letter) {
-  if (currentCol >= WORD_LENGTH) return;
+  if (isRevealing) return;
+
+  // Count letters already entered
+  const lettersEntered = board[currentRow].filter(t => t && t.textContent).length;
+  if (lettersEntered >= CLEAN_TARGET.length) return;
+
+  while (
+    currentCol < TARGET_LAYOUT.length &&
+    TARGET_LAYOUT[currentCol].isSpace
+  ) {
+    currentCol++;
+  }
+
+  if (currentCol >= TARGET_LAYOUT.length) return;
+
   board[currentRow][currentCol].textContent = letter;
   currentCol++;
 }
 
+
+
 function deleteLetter() {
-  if (currentCol <= 0) return;
-  currentCol--;
-  board[currentRow][currentCol].textContent = "";
-}
+  do {
+    currentCol--;
+  } while (
+    currentCol >= 0 &&
+    TARGET_LAYOUT[currentCol].isSpace
+  );
 
-// ===== GUESS CHECK + ANIMATION =====
-async function submitGuess() {
-  if (currentCol < WORD_LENGTH || isRevealing) return;
-
-  const guess = board[currentRow].map(t => t.textContent).join("");
-
-  // x Invalid word -> shake, no penalty
-  if (!(await isRealWord(guess))) {
-    showMessage("Not a real word");
-    shakeCurrentRow();
+  if (currentCol < 0) {
+    currentCol = 0;
     return;
   }
 
-  const result = scoreGuess(guess, TARGET_WORD);
+  board[currentRow][currentCol].textContent = "";
+}
+
+
+async function submitGuess() {
+  if (isRevealing) return;
+
+  const guess = board[currentRow]
+    .filter(t => t)
+    .map(t => t.textContent)
+    .join("");
+
+  if (guess.length < CLEAN_TARGET.length) return;
+
+  const result = scoreGuess(guess, CLEAN_TARGET);
   revealRowAnimated(result);
 
-  // After reveal finishes, advance state
-  const totalRevealMs = WORD_LENGTH * 300 + 50;
+  const totalRevealMs = CLEAN_TARGET.length * 300 + 50;
   isRevealing = true;
 
   setTimeout(() => {
     isRevealing = false;
 
     // WIN
-    if (guess === TARGET_WORD) {
+    if (guess === CLEAN_TARGET) {
       gameOver = true;
-      // Mark progress (unlock next level)
       saveProgress(currentPlayer, levelIndex + 1);
       renderLevelPanels();
-      // Win shows Continue
       document.getElementById("continue").style.display = "inline-block";
       showMessage("Nice!");
       return;
@@ -236,7 +276,7 @@ async function submitGuess() {
     currentRow++;
     currentCol = 0;
 
-    // FAIL (used all guesses)
+    // FAIL
     if (currentRow === MAX_GUESSES) {
       gameOver = true;
       document.getElementById("restart").style.display = "inline-block";
@@ -245,14 +285,15 @@ async function submitGuess() {
   }, totalRevealMs);
 }
 
+
 // Wordle-style scoring with duplicate handling
 function scoreGuess(guess, target) {
-  const res = Array(WORD_LENGTH).fill("absent");
+  const res = Array(guess.length).fill("absent");
   const targetArr = target.split("");
   const guessArr = guess.split("");
 
   // Pass 1: correct
-  for (let i = 0; i < WORD_LENGTH; i++) {
+  for (let i = 0; i < guessArr.length; i++) {
     if (guessArr[i] === targetArr[i]) {
       res[i] = "correct";
       targetArr[i] = null;
@@ -261,7 +302,7 @@ function scoreGuess(guess, target) {
   }
 
   // Pass 2: present
-  for (let i = 0; i < WORD_LENGTH; i++) {
+  for (let i = 0; i < guessArr.length; i++) {
     if (!guessArr[i]) continue;
     const idx = targetArr.indexOf(guessArr[i]);
     if (idx !== -1) {
@@ -273,16 +314,19 @@ function scoreGuess(guess, target) {
   return res;
 }
 
+
 function revealRowAnimated(states) {
   clearMessage();
 
-  for (let i = 0; i < WORD_LENGTH; i++) {
+  let stateIndex = 0;
+  let tileIndex = 0;
+
+  for (let i = 0; i < TARGET_LAYOUT.length; i++) {
     const tile = board[currentRow][i];
+    if (!tile) continue;
 
-    // Clear any previous flip classes (safety)
-    tile.classList.remove("flip-in", "flip-out");
-
-    const delay = i * 300;
+    const delay = tileIndex * 300;
+    tileIndex++;
 
     setTimeout(() => {
       tile.classList.add("flip-in");
@@ -290,20 +334,19 @@ function revealRowAnimated(states) {
       setTimeout(() => {
         tile.classList.remove("flip-in");
 
+        const state = states[stateIndex++];
         tile.classList.remove("correct", "present", "absent");
-        tile.classList.add(states[i]);
+        tile.classList.add(state);
 
-        setKeyState(
-        board[currentRow][i].textContent,
-        states[i]
-        );
-        
+        setKeyState(tile.textContent, state);
+
         tile.classList.add("flip-out");
-
       }, 250);
     }, delay);
   }
 }
+
+
 
 // ===== BUTTON ACTIONS =====
 function restartLevel() {
@@ -354,18 +397,6 @@ function clearMessage() {
   messageEl.textContent = "";
 }
 
-
-async function isRealWord(word) {
-  try {
-    const res = await fetch(
-      `https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 function shakeCurrentRow() {
   board[currentRow].forEach(tile => {
     tile.classList.add("shake");
@@ -387,6 +418,12 @@ function setKeyState(letter, state) {
     });
 }
 
+function parseTarget(word) {
+  return word.split("").map(ch => ({
+    char: ch,
+    isSpace: ch === " "
+  }));
+}
 
 
 

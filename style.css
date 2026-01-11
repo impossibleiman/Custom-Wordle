@@ -205,6 +205,9 @@ body {
     background-color: #3a3a3c;
 }
 
+.gap {
+    width: 18px;
+}
 
 
 /* Mobile */
@@ -225,3 +228,6 @@ body {
         max-width: 95%;
     }
 }
+    .gap {
+        width: 12px;
+    }
