@@ -25,8 +25,6 @@ const LEVELS = {
     { id: "han-7", word: "garlic bread" }
   ]
 };
-// pasta, tavern, cooper, bailey,biscoff, minecraft, , 
-// then garlic bread
 
 // ===== STATE =====
 let currentPlayer = null;
