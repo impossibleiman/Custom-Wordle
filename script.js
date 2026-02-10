@@ -16,16 +16,17 @@ const LEVELS = {
     { id: "mia-7", word: "stephen bunting" }
   ],
   Hannah: [
-    { id: "han-1", word: "one" },
-    { id: "han-2", word: "two" },
-    { id: "han-3", word: "garlic bread" },
-    { id: "han-4", word: "four" },
-    { id: "han-5", word: "five" },
-    { id: "han-6", word: "six" },
-    { id: "han-7", word: "seven" }
+    { id: "han-1", word: "pasta" },
+    { id: "han-2", word: "tavern" },
+    { id: "han-3", word: "cooper" },
+    { id: "han-4", word: "bailey" },
+    { id: "han-5", word: "biscoff" },
+    { id: "han-6", word: "minecraft" },
+    { id: "han-7", word: "garlic bread" }
   ]
 };
-
+// pasta, tavern, cooper, bailey,biscoff, minecraft, , 
+// then garlic bread
 
 // ===== STATE =====
 let currentPlayer = null;
