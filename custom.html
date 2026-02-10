@@ -1,11 +1,33 @@
 ﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title></title>
+    <meta charset="UTF-8" />
+    <title>Custom Wordle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-    <p>hello</p>
+    <!-- CREATOR UI -->
+    <div id="creator">
+        <input id="customWord"
+               placeholder="Enter a word or phrase"
+               autocomplete="off" />
+        <button onclick="createCustomGame()">Create Game</button>
+        <p id="shareLink"></p>
+    </div>
+
+    <!-- GAME UI (same as index.html) -->
+    <div id="game">
+        <div id="board"></div>
+        <div id="keyboard"></div>
+        <div id="message"></div>
+
+        <button id="restart" onclick="restartLevel()">Restart</button>
+        <button id="reveal" onclick="revealWord()">Reveal</button>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="custom.js"></script>
 </body>
 </html>
