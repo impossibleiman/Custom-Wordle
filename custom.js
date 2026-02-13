@@ -1,60 +1,51 @@
-// JavaScript source code
-function generateId() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
+let customSessionId = null;
 
-function getCustomStore() {
-  return JSON.parse(localStorage.getItem("customGames")) || {};
-}
-
-function saveCustomGame(id, word) {
-  const store = getCustomStore();
-  store[id] = word.toUpperCase();
-  localStorage.setItem("customGames", JSON.stringify(store));
-}
-
-function loadCustomGame(id) {
-  const store = getCustomStore();
-  return store[id] || null;
-}
-
-function createCustomGame() {
+function startCustomGame() {
   const input = document.getElementById("customWord");
   const word = input.value.trim();
 
   if (!word) return;
 
-  const id = generateId();
-  saveCustomGame(id, word);
+  // Create a unique ID every time (prevents restore on refresh)
+  customSessionId = "custom-" + Date.now();
 
-  const link = `${location.origin}${location.pathname}?id=${id}`;
-  document.getElementById("shareLink").textContent =
-    `Share this link: ${link}`;
-}
+  // Hide creator
+  document.getElementById("creator").style.display = "none";
 
-function getCustomIdFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("id");
-}
-
-const customId = getCustomIdFromURL();
-
-if (customId) {
-  const word = loadCustomGame(customId);
-
-  if (word) {
-    startCustomLevel(word);
-    document.getElementById("creator").style.display = "none";
-  } else {
-    document.getElementById("message").textContent =
-      "This game was created on another device.";
-  }
-}
-
-function startCustomLevel(word) {
+  // Inject temporary level
   LEVELS.Custom = [
-    { id: `custom-${customId}`, word }
+    {
+      id: customSessionId,
+      word: word
+    }
   ];
 
+  // Ensure no stale guesses exist
+  clearGuessesForLevel(customSessionId);
+
   startLevelFor("Custom", 0, { resetRestartCount: true });
+}
+
+function clearAndNewWord() {
+  // Remove custom progress & guesses
+  if (customSessionId) {
+    clearGuessesForLevel(customSessionId);
+  }
+
+  // Reset game UI
+  document.getElementById("board").style.display = "none";
+  document.getElementById("keyboard").style.display = "none";
+  document.getElementById("message").textContent = "";
+
+  hideControls();
+
+  // Clear input
+  document.getElementById("customWord").value = "";
+
+  // Show creator again
+  document.getElementById("creator").style.display = "flex";
+
+  // Reset script.js state safely
+  currentPlayer = null;
+  gameOver = false;
 }

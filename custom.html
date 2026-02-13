@@ -8,23 +8,43 @@
 </head>
 
 <body>
-    <!-- CREATOR UI -->
-    <div id="creator">
+
+<div id="creator" style="
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  gap:16px;
+">
+        <h2>Enter your word</h2>
+
         <input id="customWord"
-               placeholder="Enter a word or phrase"
-               autocomplete="off" />
-        <button onclick="createCustomGame()">Create Game</button>
-        <p id="shareLink"></p>
+               autocomplete="off"
+               style="padding:12px;font-size:1.1rem;text-align:center;" />
+
+        <button class="start-btn" onclick="startCustomGame()">
+            ▶ START
+        </button>
+
     </div>
 
-    <!-- GAME UI (same as index.html) -->
-    <div id="game">
-        <div id="board"></div>
-        <div id="keyboard"></div>
-        <div id="message"></div>
 
-        <button id="restart" onclick="restartLevel()">Restart</button>
-        <button id="reveal" onclick="revealWord()">Reveal</button>
+    <!-- GAME (same structure as index.html) -->
+    <div id="board"></div>
+    <div id="keyboard"></div>
+    <div id="message"></div>
+
+    <div id="controls">
+        <button id="restart" onclick="restartLevel()" style="display:none;">
+            Restart
+        </button>
+        <button id="reveal" onclick="revealWord()" style="display:none;">
+            Reveal
+        </button>
+        <button id="continue" onclick="continueLevel()" style="display:none;">
+            Continue
+        </button>
     </div>
 
     <script src="script.js"></script>

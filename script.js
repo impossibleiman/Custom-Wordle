@@ -168,7 +168,8 @@ function createBoard() {
     const rowEl = document.createElement("div");
     rowEl.className = "row";
     rowEl.style.gridTemplateColumns =
-      `repeat(${TARGET_LAYOUT.length}, minmax(0,1fr))`;
+      `repeat(${TARGET_LAYOUT.length}, minmax(5px,64px))`;
+    rowEl.style.justifyContent = "center";
 
     board[r] = [];
 
@@ -470,11 +471,11 @@ function parseTarget(word) {
 }
 
 function computeFontScale(columnCount) {
-  if (columnCount <= 6) return 75;   // big, chunky
-  if (columnCount <= 9) return 65;
+  if (columnCount <= 6) return 64;
+  if (columnCount <= 9) return 62;
   if (columnCount <= 12) return 58;
   if (columnCount <= 16) return 52;
-  return 46; // very long phrases
+  return 50; // very long phrases
 }
 
 function applyTileFontSize() {
@@ -483,9 +484,14 @@ function applyTileFontSize() {
     if (!tile) return;
 
     const size = tile.getBoundingClientRect().width;
-    boardElement.style.setProperty("--tile-size", `${size}px`);
+
+    // Cap tile size so short words don’t explode
+    const cappedSize = Math.min(size, 64);
+
+    boardElement.style.setProperty("--tile-size", `${cappedSize}px`);
   });
 }
+
 
 function scoreSegment(guess, target) {
   const res = Array(guess.length).fill("absent");

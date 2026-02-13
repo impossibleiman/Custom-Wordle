@@ -238,3 +238,29 @@ body {
     .gap {
         width: 12px;
     }
+
+
+/* Fancy Start Button */
+.start-btn {
+    appearance: none;
+    border: none;
+    border-radius: 14px;
+    padding: 18px 36px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    color: white;
+    background: linear-gradient(135deg, #538d4e, #6aaa64);
+    cursor: pointer;
+    box-shadow: 0 6px 0 #3e6f3a, 0 10px 18px rgba(0, 0, 0, 0.4);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+
+    .start-btn:hover {
+        filter: brightness(1.08);
+    }
+
+    .start-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 0 #3e6f3a, 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
