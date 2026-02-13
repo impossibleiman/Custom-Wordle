@@ -223,23 +223,6 @@ body {
     min-width: 8px;
 }
 
-
-/* Mobile */
-
-    .key {
-        padding: 10px;
-        font-size: 0.95rem;
-        min-width: 30px;
-    }
-
-    #level-panels {
-        max-width: 95%;
-    }
-    .gap {
-        width: 12px;
-    }
-
-
 /* Fancy Start Button */
 .start-btn {
     appearance: none;
@@ -264,3 +247,21 @@ body {
         transform: translateY(4px);
         box-shadow: 0 2px 0 #3e6f3a, 0 6px 12px rgba(0, 0, 0, 0.4);
     }
+
+/* Mobile */
+
+    .key {
+        padding: 10px;
+        font-size: 0.95rem;
+        min-width: 30px;
+    }
+
+    #level-panels {
+        max-width: 95%;
+    }
+    .gap {
+        width: 12px;
+    }
+
+
+
