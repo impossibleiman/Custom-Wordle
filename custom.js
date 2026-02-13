@@ -6,7 +6,9 @@ function startCustomGame() {
 
   if (!word) return;
 
-  // Create a unique ID every time (prevents restore on refresh)
+  // IMPORTANT: release mobile keyboard + focus
+  input.blur();
+
   customSessionId = "custom-" + Date.now();
 
   // Hide creator
